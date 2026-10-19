@@ -1,0 +1,25 @@
+# Datos y base de datos local
+data/
+
+# Caché y archivos temporales de Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Páginas descargadas de prueba / temporales
+Departamento en venta _ Figuera Propiedades.html
+Departamento en venta _ Figuera Propiedades_files/
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Variables de entorno y logs
+.env
+*.log

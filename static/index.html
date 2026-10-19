@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crawler & Replica Suite — Consola Inteligente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="logo-area">
+        <div class="logo-icon">🕷️</div>
+        <span>Crawler Studio</span>
+        <span class="logo-tag">Pro</span>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="nav-tabs">
+        <button class="tab-btn active" data-tab="dashboard">
+          <span>📊</span> Dashboard
+        </button>
+        <button class="tab-btn" data-tab="crawler">
+          <span>⚡</span> Crawler Live
+        </button>
+        <button class="tab-btn" data-tab="search">
+          <span>🔍</span> Búsqueda FTS
+        </button>
+        <button class="tab-btn" data-tab="docs">
+          <span>📑</span> Documentos
+        </button>
+        <button class="tab-btn" data-tab="links">
+          <span>🕸️</span> Enlaces & Grafo
+        </button>
+        <button class="tab-btn" data-tab="assets">
+          <span>🖼️</span> Imágenes & Assets
+        </button>
+        <button class="tab-btn" data-tab="errors">
+          <span>⚠️</span> Errores
+        </button>
+        <button class="tab-btn" data-tab="config">
+          <span>⚙️</span> Ajustes
+        </button>
+      </nav>
+
+      <!-- Client Scope Selector -->
+      <div class="header-actions">
+        <div class="client-selector-group">
+          <label for="clientSelect">Cliente:</label>
+          <select id="clientSelect" onchange="onClientChanged()">
+            <option value="">(Todos los clientes)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Body Content -->
+  <main class="main-wrapper">
+
+    <!-- TAB 1: DASHBOARD & OVERVIEW -->
+    <section id="tab-dashboard" class="tab-content active">
+      <div class="metrics-grid">
+        <div class="metric-card success">
+          <div class="metric-label">
+            <span>Páginas Procesadas (OK)</span>
+            <span>✅</span>
+          </div>
+          <div class="metric-value" id="metricOk">0</div>
+          <div class="metric-sub" id="metricOkSub">En el índice activo</div>
+        </div>
+
+        <div class="metric-card info">
+          <div class="metric-label">
+            <span>Documentos Normalizados</span>
+            <span>📑</span>
+          </div>
+          <div class="metric-value" id="metricDocs">0</div>
+          <div class="metric-sub" id="metricWordsTotal">0 palabras extraídas</div>
+        </div>
+
+        <div class="metric-card warning">
+          <div class="metric-label">
+            <span>Omitidas / Duplicados</span>
+            <span>⚡</span>
+          </div>
+          <div class="metric-value" id="metricSkipped">0</div>
+          <div class="metric-sub">Canonical, near-dup, robots</div>
+        </div>
+
+        <div class="metric-card danger">
+          <div class="metric-label">
+            <span>Fallos / Cuarentena</span>
+            <span>⚠️</span>
+          </div>
+          <div class="metric-value" id="metricErrors">0</div>
+          <div class="metric-sub" id="metricRetriesSub">0 pendientes de reintento</div>
+        </div>
+      </div>
+
+      <!-- Quick Launch & Activity Overview -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        
+        <!-- Status Breakdown Card -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title"><span>📈</span> Distribución de Estados</h2>
+            <button class="btn btn-sm" onclick="refreshDashboard()">Actualizar</button>
+          </div>
+          <div id="statusBreakdown" class="table-container">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Recent Crawled Pages Card -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title"><span>🕒</span> Actividad Reciente</h2>
+            <span class="card-subtitle">Últimas páginas indexadas</span>
+          </div>
+          <div id="recentActivity" class="table-container">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Link Graph Card -->
+      <div class="card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+          <h2 class="card-title"><span>🔗</span> Grafo de Enlaces (PageRank interno)</h2>
+          <button class="btn btn-sm" onclick="loadGraph()">Analizar</button>
+        </div>
+        <div id="graphBlock" class="table-container">
+          <div class="empty-state"><p>Sin análisis todavía</p></div>
+        </div>
+      </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 2: LIVE CRAWLER CONSOLE -->
+    <section id="tab-crawler" class="tab-content">
+      
+      <!-- Launch Form Card -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><span>🚀</span> Iniciar Rastreo</h2>
+          <span class="card-subtitle">El cliente se deduce del dominio de la URL inicial</span>
+        </div>
+        <form id="crawlForm" onsubmit="handleStartCrawl(event)">
+          <div class="form-row">
+            <div class="form-group" style="flex: 2;">
+              <label for="urlInput">URL Semilla (Seed URL):</label>
+              <input type="text" id="urlInput" placeholder="https://ejemplo.com o varias separadas por espacio" required>
+            </div>
+
+            <div class="form-group" style="width: 100px;">
+              <label for="maxPagesInput">Máx Págs:</label>
+              <input type="number" id="maxPagesInput" value="50" min="1" max="500">
+            </div>
+
+            <div class="form-group" style="width: 90px;">
+              <label for="workersInput">Workers:</label>
+              <input type="number" id="workersInput" value="2" min="1" max="8">
+            </div>
+
+            <div class="form-group" style="padding-bottom: 2px;">
+              <label class="checkbox-label">
+                <input type="checkbox" id="sitemapCheck" checked>
+                <span>Sitemap XML</span>
+              </label>
+            </div>
+
+            <div class="form-group" style="padding-bottom: 2px;">
+              <label class="checkbox-label">
+                <input type="checkbox" id="renderCheck" checked>
+                <span>Render JS</span>
+              </label>
+            </div>
+
+            <div class="form-group" style="display: flex; flex-direction: row; gap: 0.5rem;">
+              <button type="submit" class="btn btn-primary" id="btnCrawl">
+                <span>▶️</span> Rastrear
+              </button>
+              <button type="button" class="btn" onclick="handleRecrawl()">
+                <span>🔄</span> Revisitar
+              </button>
+              <button type="button" class="btn btn-danger" id="btnCancel" onclick="handleCancelJob()" disabled>
+                <span>⏹️</span> Cancelar
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Live Progress Bar -->
+      <div class="progress-card">
+        <div class="progress-header">
+          <div class="progress-status-badge">
+            <span class="pulse-dot" id="livePulse"></span>
+            <span id="liveStatusText">Inactivo</span>
+          </div>
+          <div id="liveCountsText" style="font-size: 0.85rem; color: var(--text-muted);">
+            0 / 0 procesadas
+          </div>
+        </div>
+
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+
+        <div class="progress-current-url" id="liveCurrentUrl">
+          Esperando comando...
+        </div>
+      </div>
+
+      <!-- Terminal Output -->
+      <div class="terminal-window">
+        <div class="terminal-header">
+          <div class="terminal-dots">
+            <div class="terminal-dot dot-red"></div>
+            <div class="terminal-dot dot-yellow"></div>
+            <div class="terminal-dot dot-green"></div>
+          </div>
+          <span style="font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-mono);">
+            crawler.live.log (Frontera & Pipeline)
+          </span>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-sm" onclick="clearLog()">Limpiar</button>
+            <button class="btn btn-sm" onclick="triggerStripBoilerplate()">Limpiar Boilerplate</button>
+          </div>
+        </div>
+        <div class="terminal-body" id="terminalLog">
+          <!-- Live events streamed here -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 3: FULL TEXT SEARCH (FTS5) -->
+    <section id="tab-search" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><span>🔎</span> Búsqueda de Alta Precisión (FTS5 + BM25)</h2>
+          <span class="card-subtitle">Ranking ponderado por relevancia en títulos y texto</span>
+        </div>
+
+        <div class="search-input-wrap">
+          <input type="search" id="searchQuery" placeholder="Escribe palabras clave, frases o términos..." style="flex: 1;" onkeydown="if(event.key==='Enter') executeSearch()">
+          <button class="btn btn-primary" onclick="executeSearch()">
+            <span>🔍</span> Buscar
+          </button>
+        </div>
+
+        <div id="searchResultsContainer" class="search-results-list">
+          <div class="empty-state">
+            <div class="empty-icon">💡</div>
+            <p>Ingresa una consulta para buscar dentro del índice normalizado.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: DOCUMENTS & REPLICAS -->
+    <section id="tab-docs" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><span>📑</span> Documentos Extraídos y Réplicas Propias</h2>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-sm" onclick="triggerReindex()" title="Re-parsea los archivos crudos guardados en data/raw/ con los parsers actuales. Actualiza texto, títulos, enlaces, imágenes y datos estructurados + índice FTS + réplicas, SIN volver a descargar de la web. Úsalo tras mejorar parsers.">Re-indexar crudo ⓘ</button>
+            <button class="btn btn-sm btn-primary" onclick="loadDocuments()">Refrescar</button>
+          </div>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 0.75rem;">
+          <strong>Re-indexar crudo:</strong> relee el HTML/PDF/etc. original guardado en
+          <code>data/raw/</code> y regenera documentos, índice FTS y réplicas con el código actual.
+          No consume red ni afecta a otros clientes. Lo verás reflejado al refrescar.
+        </p>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Título / Página</th>
+                <th>URL Original</th>
+                <th>Palabras</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="docsTableBody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: LINKS AUDIT & INTERNAL GRAPH -->
+    <section id="tab-links" class="tab-content">
+      <div class="metrics-grid">
+        <div class="metric-card info">
+          <div class="metric-label">
+            <span>Aristas / Conexiones Internas</span>
+            <span>🔗</span>
+          </div>
+          <div class="metric-value" id="metricGraphEdges">0</div>
+          <div class="metric-sub">Enlaces internos totales</div>
+        </div>
+
+        <div class="metric-card warning">
+          <div class="metric-label">
+            <span>Páginas Huérfanas</span>
+            <span>👻</span>
+          </div>
+          <div class="metric-value" id="metricGraphOrphans">0</div>
+          <div class="metric-sub">Sin enlaces entrantes internos</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+        
+        <!-- PageRank Leaderboard -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title"><span>👑</span> Top Autoridad Interna (PageRank)</h2>
+            <button class="btn btn-sm btn-primary" onclick="loadLinkGraph()">Actualizar</button>
+          </div>
+          <div id="pagerankContainer" class="table-container">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Depth Distribution & Anchors Audit -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title"><span>📊</span> Distribución por Profundidad (Depth)</h2>
+          </div>
+          <div id="depthHistContainer" style="margin-bottom: 1.25rem;">
+            <!-- Rendered by JS -->
+          </div>
+          
+          <div class="card-header" style="margin-top: 1rem;">
+            <h3 class="card-title" style="font-size: 1rem;"><span>🏷️</span> Textos de Enlace Genéricos Detectados</h3>
+          </div>
+          <div id="genericAnchorsContainer" class="table-container">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Orphans Table -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><span>🚨</span> Páginas Huérfanas (Sin Enlaces Entrantes)</h2>
+          <span class="card-subtitle">Páginas indexadas a las que ningún otro enlace interno apunta</span>
+        </div>
+        <div id="orphansTableContainer" class="table-container">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 6: MEDIA & ASSETS -->
+    <section id="tab-assets" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><span>🖼️</span> Clasificación Inteligente de Imágenes & Assets</h2>
+          <button class="btn btn-sm btn-primary" onclick="loadAssets()">Refrescar</button>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Preview / Fuente</th>
+                <th>Rol Detectado</th>
+                <th>Texto Alt / Leyenda</th>
+                <th>Páginas</th>
+              </tr>
+            </thead>
+            <tbody id="assetsTableBody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 7: ERROR DIAGNOSTICS & RETRIES -->
+    <section id="tab-errors" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><span>⚠️</span> Diagnóstico de Fallos y Cuarentena</h2>
+          <button class="btn btn-sm btn-primary" onclick="retryAllFailed()">Reintentar Todos los Fallidos</button>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>URL</th>
+                <th>Error</th>
+                <th>HTTP Status</th>
+                <th>Reintentos</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="errorsTableBody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 6: CLIENT SETTINGS -->
+    <section id="tab-config" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><span>⚙️</span> Ajustes del Cliente Seleccionado</h2>
+          <span class="card-subtitle">Se persisten de forma aislada en SQLite (tabla client_config)</span>
+        </div>
+
+        <div id="configFieldsGrid" class="config-grid">
+          <!-- Dynamically populated config fields -->
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button class="btn" onclick="loadClientConfig()">Restaurar</button>
+          <button class="btn btn-primary" onclick="saveClientConfig()">Guardar Ajustes</button>
+        </div>
+      </div>
+
+      <div class="card" style="border-color: var(--danger, #ef4444); margin-top: 1.5rem;">
+        <div class="card-header">
+          <h2 class="card-title"><span>🗑️</span> Zona de peligro — Eliminar registros</h2>
+          <span class="card-subtitle">Borrado completo e irreversible (DB + réplicas + crudo)</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Elimina todos los registros del cliente seleccionado: páginas, documentos, índice FTS,
+          visits, grafo, entities, assets, réplicas y crudos. Pide confirmación explícita.
+        </p>
+        <p style="font-size: 0.9rem;">
+          Cliente seleccionado: <strong id="dangerClientName">(ninguno — elige uno arriba)</strong>
+        </p>
+        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem;">
+          <span id="dangerClientHint" style="font-size: 0.8rem; color: var(--text-muted);"></span>
+          <button id="btnDeleteClient" class="btn btn-danger" onclick="deleteClient()" disabled>Eliminar cliente seleccionado</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Document Preview Modal -->
+  <div class="modal-backdrop" id="docModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalDocTitle">Detalle de Documento</h3>
+        <button class="modal-close" onclick="closeDocModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modalDocBody">
+        <!-- Document preview content -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
